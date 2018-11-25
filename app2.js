@@ -12,8 +12,8 @@ let message = {
     receiver: ''
 }
 
-const username = 'spiderman';
-const username_friend = 'yoda';
+const username = 'yoda';
+const username_friend = 'spiderman';
 
 let clientID;
 let viewer = document.getElementsByClassName('messages');
@@ -92,10 +92,10 @@ function addMessage(message) {
     const image = document.createElement('img');
     if (message.sender === username) {
         li.classList.add('sent');
-        image.src = img; 
+        image.src = img2; 
     } else {
         li.classList.add("replies");
-        image.src = img2; 
+        image.src = img; 
     }
     p.appendChild(text);
     li.appendChild(image, li.childNodes[0]);
