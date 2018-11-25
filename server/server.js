@@ -13,40 +13,42 @@ const wss = new WebSocketServer({ server });
 app.use(cors());
 //app.use(express.static(path.join(__dirname, '../browser')));
 
-let cid = 0;
+let clientList = {};
+
 // websocket on connection
-wss.on('connection', (ws) => {
-  const clientId = cid++;
+wss.on('connection', (client) => {
   const subscription = new Subscription();
-
-  console.log(`client ${clientId} CONNECTED`);
+  console.log(`New Client CONNECTED!`);
   // send back to client to store clientID
-  ws.send(createMessage(`connected_to_server`, false, clientId));
-  wss.clients.forEach(client => {
-        if (client != ws) {
-            client.send(createMessage(`new_client`, true, ''));
+  client.send(createMessage(`connected_to_server`, false, 'SERVER'));
+  /* wss.clients.forEach(client2 => {
+        if (client2 != client) {
+            client2.send(createMessage(`new_client`, true, ''));
         }
-    });
+    }); */
 
-  ws.on('close', () => {
-    console.log(`client ${clientId} CLOSED`);
+  client.on('close', () => {
+    console.log(`client CLOSED`);
     subscription.unsubscribe();
   });
 
-  ws.on('error', (error) => {
-    console.log(`client ${clientId} ERROR`);
+  client.on('error', (error) => {
+    console.log(`client ERROR`);
     console.error(error);
     subscription.unsubscribe();
   });
 
-  ws.on('message', (msg) => {
-    let message;
-    console.log(`client ${clientId} -> ${msg}`);
+  client.on('message', (msg) => {
+    message = JSON.parse(msg);
+    console.log(`Message from client: ${message.sender} -> ${msg}`);
+    // save client on SERVER
+    if (!clientList[message.sender]) {
+      saveClient(message.sender, client);
+    }
 
-    try {
-      message = JSON.parse(msg);
-    } catch (err) {
-      console.error(`ERROR: client ${clientId} - unable to parse message "${msg}"`);
+    if (message.receiver) {
+      // send message between two client
+      clientList[message.receiver].send(msg);
     }
 
     //ws.send(createMessage('Hi there, I am a WebSocket server', false, clientId));
@@ -54,9 +56,9 @@ wss.on('connection', (ws) => {
     if (message.isBroadcast) {
         //send back the message to the other clients
         wss.clients
-            .forEach(client => {
-                if (client != ws) {
-                    client.send(createMessage(message.content, true, message.sender));
+            .forEach(client2 => {
+                if (client2 != client) {
+                    client2.send(createMessage(message.content, true, message.sender));
                 }
             });
     }
@@ -64,10 +66,16 @@ wss.on('connection', (ws) => {
   });
 });
 
-function createMessage(content, isBroadcast, sender) {
-    return JSON.stringify({content, isBroadcast, sender});
+// create send message
+function createMessage(content, isBroadcast, sender, receiver) {
+    return JSON.stringify({content, isBroadcast, sender, receiver});
 }
 
+// save clients on SERVER
+function saveClient(username, client) {
+  console.log(`Client *${username}* saved on Server`);
+  clientList[username] = client;
+}
 
 server.listen(PORT, () => console.log(`server listening on port ${PORT}`));
 server.on('request', app);
