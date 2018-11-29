@@ -11,6 +11,7 @@ const PORT = 8081;
 const wss = new WebSocketServer({server});
 
 app.use(cors());
+app.use(express.static(path.join(__dirname, '../')));
 
 let clientList = [];
 let cid = 0;
