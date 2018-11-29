@@ -7,7 +7,7 @@
     let serverMessages = [];
 
     let message = {
-        type: '',
+        type: 'message',
         content: '',
         sender: '',
         receiver: '',
@@ -22,11 +22,12 @@
         batman: 'assets/image/batman.jpg',
         reply: 'assets/image/reply.png',
         yoda: 'assets/image/yoda.jpg',
-        default: 'assets/image/profile_default.png'
+        default: 'assets/image/profile_default.png',
+        server: 'assets/image/root.png'
     };
 
-    const channel_list = [];
-    let myClientID = 0;
+    let channel_list = [];
+    let myClientId = 0;
     let viewer = document.getElementsByClassName('messages');
 
 // WebSocket
@@ -39,7 +40,7 @@
                     localStorage.setItem('avatar', 'default');
                     if (username != null) {
                         localStorage.setItem('username', username);
-                        const avatar = prompt('Insert your favorite avatar from ["spiderman", "batman", "reply", "yoda"]:', 'spiderman');
+                        avatar = prompt('Insert your favorite avatar from ["spiderman", "batman", "reply", "yoda"]:', 'spiderman');
                         if (avatar != null) {
                             if (avatars[avatar] != null) {
                                 localStorage.setItem('avatar', avatar);
@@ -58,17 +59,29 @@
         .pipe(
             retryWhen(switchMap(() => timer(1000))) // disconnect strategy
         )
-        .subscribe((message) => {
-                if (message.content === 'connected_to_server') {
-                    console.log(`message received from: ${message.sender}`);
-                    sendMessage('login', username, false);
-                } else if (message.content === 'new_client') {
-                    updateContact(message);
-                } else {
-                    console.log('message received: ', message);
-                    serverMessages.push(message);
-                    addMessage(message);
-                    scroll();
+        .subscribe((resp) => {
+                switch (resp.type) {
+                    case 'INFO': {
+                        myClientId = resp.message.myClientId;
+                        break;
+                    }
+                    case 'LIST': {
+                        updateContacts(resp.message.userList);
+                        break;
+                    }
+                    case 'ANNOUNCE': {
+                        if (resp.message.userList) updateContacts(resp.message.userList);
+                        addMessage(resp.message, true);
+                        scroll();
+                        break;
+                    }
+                    case 'MSG': {
+                        console.log('message received: ', resp.message);
+                        serverMessages.push(resp.message.content);
+                        addMessage(resp.message);
+                        scroll();
+                        break;
+                    }
                 }
             },
             (err) => console.error(err),
@@ -76,17 +89,21 @@
         );
 
     function sendMessage(content, sender, isBroadcast, receiver) {
-        message = {
-            content: content,
-            sender: sender,
-            isBroadcast: isBroadcast,
-            receiver: receiver
-        };
-        // serverMessages.push(message);
-        console.log('sendMessage: ', JSON.stringify(message));
-        webSocket$.next(message);
-        if (receiver) {
-            showMessage(message);
+        if (content && content.length > 0) {
+            message = {
+                type: 'message',
+                content: {content: content},
+                from: myClientId,
+                receiver: receiver,
+                avatar: avatar
+            };
+            // serverMessages.push(message);
+            console.log('sendMessage: ', JSON.stringify(message));
+            webSocket$.next(message);
+            if (receiver) {
+                showMessage(message);
+            }
+            document.getElementById('message').value = '';
         }
     }
 
@@ -97,14 +114,14 @@
     }
 
     document.getElementById('send').addEventListener('click', function () {
-        sendMessage(document.getElementById('message').value, username, false, username_friend);
+        sendMessage(document.getElementById('message').value, username, false);
     });
     document.getElementById('message').addEventListener("keyup", function (event) {
         // Cancel the default action, if needed
         event.preventDefault();
         // Number 13 is the "Enter" key on the keyboard
         if (event.keyCode === 13) {
-            sendMessage(document.getElementById('message').value, username, false, username_friend);
+            sendMessage(document.getElementById('message').value, username, false);
         }
     });
 
@@ -120,18 +137,19 @@
     });
 
 
-    function addMessage(message) {
+    function addMessage(message, isServer) {
         const messages = document.getElementById('messlist');
         const li = document.createElement('li');
         var text = document.createTextNode(message.content);
         const p = document.createElement('p');
         const image = document.createElement('img');
-        if (message.sender === username) {
+        const idx = channel_list.findIndex(e => e.clientId === message.from);
+        if (message.from === myClientId) {
             li.classList.add('sent');
-            image.src = img;
+            image.src = avatars[avatar];
         } else {
-            li.classList.add("replies");
-            image.src = img2;
+            li.classList.add(isServer ? "server" : "replies");
+            image.src = isServer ? avatars.server : idx < 0 ? avatars.default : avatars[channel_list[idx].avatar];
         }
         p.appendChild(text);
         li.appendChild(image, li.childNodes[0]);
@@ -139,10 +157,24 @@
         messages.appendChild(li, messages.childNodes[0]);
     }
 
-    function updateContact(message) {
+    function updateContacts(list) {
+        channel_list = list;
         const contacts = document.getElementById('contactlist');
-        const first_li = document.getElementsByClassName('contact-status')[0];
-        first_li.classList.add('online');
+        contacts.innerHTML = '';
+        list.forEach(user => {
+            if (user.clientId !== myClientId) {
+                contacts.innerHTML += `<li class="contact active">
+                    <div class="wrap">
+                        <span class="contact-status ${user.online ? 'online' : ''}"></span>
+                        <img src="${avatars[user.avatar || 'default']}" alt=""/>
+                        <div class="meta">
+                            <p class="name">${user.username}</p>
+                            <p class="preview">I'm the master!</p>
+                        </div>
+                    </div>
+                </li>`;
+            }
+        });
     }
 
     function scroll() {

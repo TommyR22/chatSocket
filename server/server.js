@@ -12,7 +12,7 @@ const wss = new WebSocketServer({server});
 
 app.use(cors());
 
-let clientList = {};
+let clientList = [];
 let cid = 0;
 // websocket on connection
 wss.on('connection', (client) => {
@@ -24,9 +24,9 @@ wss.on('connection', (client) => {
 
     // handle disconnect client
     client.on('close', () => {
-        console.log(`client ${clientId} DISCONNECT`);
-        const client = saveClient(clientId, {type: 'disconnect'}, client);
-        sendMessage({type: 'ANNOUNCE', content: `user ${client.username} disconnected to channel`, sender: 'SERVER', userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))});
+        const client = saveClient(clientId, {type: 'disconnect'});
+        console.log(`client ${clientId} *${client.username}* DISCONNECT`);
+        sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${client.username}" disconnected to channel`, userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, sender: 'SERVER'});
         subscription.unsubscribe();
     });
 
@@ -48,17 +48,12 @@ wss.on('connection', (client) => {
             case 'connect': {
                 // save client on SERVER
                 saveClient(clientId, message, client);
-                sendMessage({type: 'ANNOUNCE', content: `user ${message.sender} connected to channel`, sender: 'SERVER', userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))});
+                sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${message.sender}" connected to channel`, userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, sender: 'SERVER'});
                 break;
             }
             case 'disconnect': {
                 saveClient(clientId, message, client);
-                sendMessage({
-                    type: 'ANNOUNCE',
-                    content: `user ${message.sender} disconnected to channel`,
-                    sender: 'SERVER',
-                    userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))
-                });
+                sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${message.sender}" disconnected to channel`, userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, sender: 'SERVER'});
                 break;
             }
             case 'message': {
@@ -68,6 +63,8 @@ wss.on('connection', (client) => {
                 if (message.receiver) {
                     toClient = clientList.find(e => e.username === message.receiver);
                 }
+                delete message['type'];
+                message.content.from = message.from;
                 sendMessage(message, clientId, toClient);
                 break;
             }
@@ -85,10 +82,18 @@ function saveClient(cId, connectMessage, client) {
     let newClient = {clientId: cId, ws: client, username: connectMessage.sender, avatar: connectMessage.avatar, online: connectMessage.type === 'connect'};
     if (connectMessage.type === 'connect') {
         console.log(`Client *${connectMessage.sender}* saved on Server`);
-        client.send(createMessage({sender: 'SERVER', userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))}, false, 'SERVER', connectMessage.sender, 'LIST'));
+        client.send(createMessage({userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, false, 'SERVER', connectMessage.sender, 'LIST'));
     }
-    clientList[connectMessage.sender] = newClient;
-    return newClient;
+    const idx = clientList.findIndex(c => connectMessage.type === 'connect' ? c.username === connectMessage.sender : c.clientId === cId);
+    if (idx >= 0) {
+        clientList[idx].clientId = cId;
+        clientList[idx].online = newClient.online;
+        clientList[idx].ws = client;
+        return clientList[idx];
+    } else {
+        clientList.push(newClient);
+        return newClient;
+    }
 }
 
 // manage send message from->to client or broadcast to channel
