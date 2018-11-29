@@ -15,7 +15,7 @@
     };
 
     let username = localStorage.getItem('username');
-    let avatar = localStorage.getItem('avatar');
+    let avatar = localStorage.getItem('avatar') || 'default';
 
     let avatars = {
         spiderman: 'assets/image/spiderman.jpg',
@@ -36,7 +36,6 @@
             () => {
                 if (username == null) {
                     username = prompt('Insert your username:', 'spiderman');
-                    avatar = 'default';
                     localStorage.setItem('avatar', 'default');
                     if (username != null) {
                         localStorage.setItem('username', username);
@@ -55,6 +54,9 @@
             },
             () => ({type: 'disconnect', avatar: avatar, sender: username}),
             (_) => true
+        )
+        .pipe(
+            retryWhen(switchMap(() => timer(1000))) // disconnect strategy
         )
         .subscribe((message) => {
                 if (message.content === 'connected_to_server') {
