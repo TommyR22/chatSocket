@@ -30,7 +30,7 @@
     let viewer = document.getElementById('messages');
 
     // WebSocket
-    const webSocket$ = webSocket('ws://localhost:8081');
+    const webSocket$ = webSocket('ws://' + window.location.hostname + ':8081');
     webSocket$
         .multiplex(
             () => {
