@@ -1,8 +1,7 @@
 (function () {
-    const {Observable, fromEvent, empty, timer} = rxjs;
-    const {ajax} = rxjs.ajax;
+    const {fromEvent, timer, merge} = rxjs;
     const {webSocket} = rxjs.webSocket;
-    const {debounceTime, map, switchMap, catchError, retryWhen} = rxjs.operators;
+    const {switchMap, retryWhen} = rxjs.operators;
 
     let serverMessages = [];
 
@@ -28,9 +27,9 @@
 
     let channel_list = [];
     let myClientId = 0;
-    let viewer = document.getElementsByClassName('messages');
+    let viewer = document.getElementById('messages');
 
-// WebSocket
+    // WebSocket
     const webSocket$ = webSocket('ws://localhost:8081');
     webSocket$
         .multiplex(
@@ -88,6 +87,31 @@
             () => console.warn('Completed!')
         );
 
+    merge(fromEvent(document.getElementById('send'), 'click'),
+        fromEvent(document.getElementById('message'), 'keyup'))
+        .subscribe((event) => {
+            event.preventDefault();
+            if (event.type === 'keyup' && event.keyCode === 13) {
+                sendMessage(document.getElementById('message').value, username, false);
+            } else if (event.type === 'click') {
+                sendMessage(document.getElementById('message').value, username, false);
+            }
+        });
+
+    fromEvent(document.getElementById('options'), 'click')
+        .subscribe(() => {
+            const profile = document.getElementById('profile');
+            profile.classList.toggle('expanded');
+            const contacts = document.getElementById('contacts');
+            contacts.classList.toggle('expanded');
+        });
+
+    fromEvent(document.getElementById('profile-img'), 'click')
+        .subscribe(() => {
+            const status = document.getElementById('status-options');
+            status.classList.toggle('active');
+        });
+
     function sendMessage(content, sender, isBroadcast, receiver) {
         if (content && content.length > 0) {
             message = {
@@ -100,42 +124,9 @@
             // serverMessages.push(message);
             console.log('sendMessage: ', JSON.stringify(message));
             webSocket$.next(message);
-            if (receiver) {
-                showMessage(message);
-            }
             document.getElementById('message').value = '';
         }
     }
-
-    function showMessage(message) {
-        addMessage(message);
-        document.getElementById('message').value = '';
-        scroll();
-    }
-
-    document.getElementById('send').addEventListener('click', function () {
-        sendMessage(document.getElementById('message').value, username, false);
-    });
-    document.getElementById('message').addEventListener("keyup", function (event) {
-        // Cancel the default action, if needed
-        event.preventDefault();
-        // Number 13 is the "Enter" key on the keyboard
-        if (event.keyCode === 13) {
-            sendMessage(document.getElementById('message').value, username, false);
-        }
-    });
-
-    document.getElementById('options').addEventListener('click', function () {
-        const profile = document.getElementById('profile');
-        profile.classList.toggle('expanded');
-        const contacts = document.getElementById('contacts');
-        contacts.classList.toggle('expanded');
-    });
-    document.getElementById('profile-img').addEventListener('click', function () {
-        const status = document.getElementById('status-options');
-        status.classList.toggle('active');
-    });
-
 
     function addMessage(message, isServer) {
         const messages = document.getElementById('messlist');
@@ -180,7 +171,7 @@
     function scroll() {
         setTimeout(() => {
             scrollToBottom();
-        }, 100);
+        }, 200);
     }
 
     function getDiff() {
@@ -206,4 +197,5 @@
     function easeInOutSin(t) {
         return (1 + Math.sin(Math.PI * t - Math.PI / 2)) / 2;
     }
+
 }());

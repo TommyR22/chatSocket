@@ -57,7 +57,7 @@ wss.on('connection', (client) => {
                 break;
             }
             case 'message': {
-                console.log(`Message from client ${clientId} -> ${message.sender}: ${message}`);
+                console.log(`Message from client ${clientId} to ${message.receiver || 'all'} -> ${message.content.content}`);
                 //send back the message to the other clients
                 let toClient = null;
                 if (message.receiver) {
