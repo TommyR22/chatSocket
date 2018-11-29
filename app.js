@@ -1,8 +1,8 @@
 (function () {
-    const { Observable, fromEvent, empty, timer } = rxjs;
-    const { ajax } = rxjs.ajax;
-    const { webSocket } = rxjs.webSocket;
-    const { debounceTime, map, switchMap, catchError, retryWhen } = rxjs.operators;
+    const {Observable, fromEvent, empty, timer} = rxjs;
+    const {ajax} = rxjs.ajax;
+    const {webSocket} = rxjs.webSocket;
+    const {debounceTime, map, switchMap, catchError, retryWhen} = rxjs.operators;
 
     let serverMessages = [];
 
@@ -10,24 +10,51 @@
         type: '',
         content: '',
         sender: '',
-        receiver: ''
+        receiver: '',
+        avatar: ''
     };
 
-    const username = 'spiderman';
-    const username_friend = 'yoda';
+    let username = localStorage.getItem('username');
+    let avatar = localStorage.getItem('avatar');
 
+    let avatars = {
+        spiderman: 'assets/image/spiderman.jpg',
+        batman: 'assets/image/batman.jpg',
+        reply: 'assets/image/reply.png',
+        yoda: 'assets/image/yoda.jpg',
+        default: 'assets/image/profile_default.png'
+    };
+
+    const channel_list = [];
     let myClientID = 0;
     let viewer = document.getElementsByClassName('messages');
-    let img = 'assets/image/spiderman.jpg';
-    let img2 = 'assets/image/yoda.jpg';
 
 // WebSocket
     const webSocket$ = webSocket('ws://localhost:8081');
     webSocket$
         .multiplex(
-            () => ({type: 'sub', symbol}),
-            () => ({type: 'unsub', symbol}),
-            x => x.symbol === symbol
+            () => {
+                if (username == null) {
+                    username = prompt('Insert your username:', 'spiderman');
+                    avatar = 'default';
+                    localStorage.setItem('avatar', 'default');
+                    if (username != null) {
+                        localStorage.setItem('username', username);
+                        const avatar = prompt('Insert your favorite avatar from ["spiderman", "batman", "reply", "yoda"]:', 'spiderman');
+                        if (avatar != null) {
+                            if (avatars[avatar] != null) {
+                                localStorage.setItem('avatar', avatar);
+                            }
+                        }
+                    }
+                }
+                // update images
+                document.getElementById("username").innerText = username;
+                document.getElementById("profile-img").src = avatars[avatar];
+                return {type: 'connect', avatar: avatar, sender: username};
+            },
+            () => ({type: 'disconnect', avatar: avatar, sender: username}),
+            (_) => true
         )
         .subscribe((message) => {
                 if (message.content === 'connected_to_server') {

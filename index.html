@@ -10,9 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.2/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
     <link rel="stylesheet" href="app.css">
+    <script src="https://unpkg.com/rxjs@6/bundles/rxjs.umd.min.js"></script>
 
     <title>ChatRxSocket</title>
-    <script src="https://unpkg.com/rxjs@6/bundles/rxjs.umd.min.js"></script>
 </head>
 
 
@@ -21,8 +21,8 @@
     <div id="sidepanel">
         <div id="profile">
             <div class="wrap">
-                <img id="profile-img" src="assets/image/spiderman.jpg" class="online" alt=""/>
-                <p>Spiderman</p>
+                <img id="profile-img" src="assets/image/profile_default.png" class="online" alt=""/>
+                <p id="username">-</p>
                 <i class="fa fa-chevron-down expand-button" id="options" aria-hidden="true"></i>
                 <div id="status-options">
                     <ul>

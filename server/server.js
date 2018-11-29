@@ -26,9 +26,7 @@ wss.on('connection', (client) => {
     client.on('close', () => {
         console.log(`client ${clientId} DISCONNECT`);
         const client = saveClient(clientId, {type: 'disconnect'}, client);
-        sendMessage({type: 'ANNOUNCE', content: `user ${client.username} disconnected to channel`, sender: 'SERVER', userList: clientList.map(e => {
-                return {clientId: e.clientId, username: e.username, online: e.online};
-            })});
+        sendMessage({type: 'ANNOUNCE', content: `user ${client.username} disconnected to channel`, sender: 'SERVER', userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))});
         subscription.unsubscribe();
     });
 
@@ -50,9 +48,7 @@ wss.on('connection', (client) => {
             case 'connect': {
                 // save client on SERVER
                 saveClient(clientId, message, client);
-                sendMessage({type: 'ANNOUNCE', content: `user ${message.sender} connected to channel`, sender: 'SERVER', userList: clientList.map(e => {
-                        return {clientId: e.clientId, username: e.username, online: e.online};
-                    })});
+                sendMessage({type: 'ANNOUNCE', content: `user ${message.sender} connected to channel`, sender: 'SERVER', userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))});
                 break;
             }
             case 'disconnect': {
@@ -61,9 +57,7 @@ wss.on('connection', (client) => {
                     type: 'ANNOUNCE',
                     content: `user ${message.sender} disconnected to channel`,
                     sender: 'SERVER',
-                    userList: clientList.map(e => {
-                        return {clientId: e.clientId, username: e.username, online: e.online};
-                    })
+                    userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))
                 });
                 break;
             }
@@ -91,9 +85,7 @@ function saveClient(cId, connectMessage, client) {
     let newClient = {clientId: cId, ws: client, username: connectMessage.sender, avatar: connectMessage.avatar, online: connectMessage.type === 'connect'};
     if (connectMessage.type === 'connect') {
         console.log(`Client *${connectMessage.sender}* saved on Server`);
-        client.send(createMessage({sender: 'SERVER', userList: clientList.map(e => {
-                return {clientId: e.clientId, username: e.username, online: e.online};
-            })}, false, 'SERVER', connectMessage.sender, 'LIST'));
+        client.send(createMessage({sender: 'SERVER', userList: clientList.map(e => ({clientId: e.clientId, username: e.username, online: e.online}))}, false, 'SERVER', connectMessage.sender, 'LIST'));
     }
     clientList[connectMessage.sender] = newClient;
     return newClient;
