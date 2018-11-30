@@ -5,6 +5,10 @@ const WebSocketServer = require('ws').Server;
 const {Subscription} = require('rxjs');
 const cors = require('cors');
 
+var ip = require("ip");
+console.log('Your IP address is: ');
+console.dir ( ip.address() );
+
 const app = express();
 const PORT = 8081;
 
