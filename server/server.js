@@ -25,13 +25,13 @@ wss.on('connection', (client) => {
     const subscription = new Subscription();
     console.log(`New Client ${clientId} CONNECTED!`);
     // send back to client to store clientID
-    client.send(createMessage({sender: 'SERVER', myClientId: clientId}, false, 'SERVER', '', 'INFO'));
+    client.send(createMessage({from: 'SERVER', myClientId: clientId}, false, 'SERVER', 'all', 'INFO'));
 
     // handle disconnect client
     client.on('close', () => {
         const client = saveClient(clientId, {type: 'disconnect'});
         console.log(`client ${clientId} *${client.username}* DISCONNECT`);
-        sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${client.username}" disconnected to channel`, userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, sender: 'SERVER'});
+        sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${client.username}" disconnected to channel`, from: 'SERVER'}});
         subscription.unsubscribe();
     });
 
@@ -53,20 +53,26 @@ wss.on('connection', (client) => {
             case 'connect': {
                 // save client on SERVER
                 saveClient(clientId, message, client);
-                sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${message.sender}" connected to channel`, userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, sender: 'SERVER'});
+                sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${message.sender}" connected to channel`, from: 'SERVER'}});
                 break;
             }
             case 'disconnect': {
                 saveClient(clientId, message, client);
-                sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${message.sender}" disconnected to channel`, userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, sender: 'SERVER'});
+                sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${message.sender}" disconnected to channel`, from: 'SERVER'}});
+                break;
+            }
+            case 'status': {
+                const idx = clientList.findIndex(e => e.clientId === clientId)
+                clientList[idx].status = message.status;
+                sendMessage({type: 'ANNOUNCE', content: {content: `---- > User: "${message.sender}" change status to ${message.status}`, from: 'SERVER'}});
                 break;
             }
             case 'message': {
                 console.log(`Message from client ${clientId} to ${message.receiver || 'all'} -> ${message.content.content}`);
                 //send back the message to the other clients
                 let toClient = null;
-                if (message.receiver) {
-                    toClient = clientList.find(e => e.username === message.receiver);
+                if (message.receiver != null) {
+                    toClient = clientList.find(e => e.clientId === message.receiver);
                 }
                 delete message['type'];
                 message.content.from = message.from;
@@ -79,20 +85,25 @@ wss.on('connection', (client) => {
 
 // create send message
 function createMessage(content, isBroadcast, sender, receiver = 'all', type = 'MSG') {
-    return JSON.stringify({message: content, isPrivate: !isBroadcast, from: sender, to: receiver, type: type});
+    let toSend = {message: content, isPrivate: !isBroadcast, from: sender, to: receiver, type: type};
+    if(sender === 'SERVER') {
+        toSend.message.userList = clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online, status: e.status}));
+    }
+    return JSON.stringify(toSend);
 }
 
 // save clients on SERVER
 function saveClient(cId, connectMessage, client) {
-    let newClient = {clientId: cId, ws: client, username: connectMessage.sender, avatar: connectMessage.avatar, online: connectMessage.type === 'connect'};
+    let newClient = {clientId: cId, ws: client, username: connectMessage.sender, avatar: connectMessage.avatar, online: connectMessage.type === 'connect', status: connectMessage.status};
     if (connectMessage.type === 'connect') {
         console.log(`Client *${connectMessage.sender}* saved on Server`);
-        client.send(createMessage({userList: clientList.map(e => ({clientId: e.clientId, username: e.username, avatar: e.avatar, online: e.online}))}, false, 'SERVER', connectMessage.sender, 'LIST'));
+        client.send(createMessage({from: 'SERVER'}, false, 'SERVER', connectMessage.sender, 'LIST'));
     }
     const idx = clientList.findIndex(c => connectMessage.type === 'connect' ? c.username === connectMessage.sender : c.clientId === cId);
     if (idx >= 0) {
         clientList[idx].clientId = cId;
         clientList[idx].online = newClient.online;
+        clientList[idx].status = !client ? 'offline' : newClient.status;
         clientList[idx].ws = client;
         return clientList[idx];
     } else {
@@ -107,10 +118,12 @@ function sendMessage(message, fromClient, toClient) {
         .filter(e => !!e.online)
         .forEach(client2 => {
             if(message.type && message.type === 'ANNOUNCE') {
-                client2.ws.send(createMessage(message.content, !message.receiver, message.sender, message.receiver, message.type));
+                client2.ws.send(createMessage(message.content, !message.receiver, 'SERVER', message.receiver, message.type));
             } else {
                 if (toClient) {
-                    clientList[toClient.username].ws.send(createMessage(message.content, !message.receiver, message.sender, message.receiver, message.type));
+                    if(toClient.clientId === client2.clientId || fromClient === client2.clientId){
+                        client2.ws.send(createMessage(message.content, true, message.sender, message.receiver, message.type));
+                    }
                 } else {
                     client2.ws.send(createMessage(message.content, !message.receiver, message.sender, message.receiver, message.type));
                 }
@@ -118,5 +131,6 @@ function sendMessage(message, fromClient, toClient) {
         });
 }
 
+clientList.push({clientId: -1, ws: null, username: '#GENERAL', avatar: 'general', online: false, status: 'online'});
 server.listen(PORT, () => console.log(`server listening on port ${PORT}`));
 server.on('request', app);

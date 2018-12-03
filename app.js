@@ -3,7 +3,9 @@
     const {webSocket} = rxjs.webSocket;
     const {switchMap, retryWhen} = rxjs.operators;
 
-    let serverMessages = [];
+    let serverMessages = {
+        '-1': []
+    };
 
     let message = {
         type: 'message',
@@ -15,6 +17,7 @@
 
     let username = localStorage.getItem('username');
     let avatar = localStorage.getItem('avatar') || 'default';
+    let myStatus = sessionStorage.getItem('status') || 'online';
 
     let avatars = {
         spiderman: 'assets/image/spiderman.jpg',
@@ -22,12 +25,14 @@
         reply: 'assets/image/reply.png',
         yoda: 'assets/image/yoda.jpg',
         default: 'assets/image/profile_default.png',
-        server: 'assets/image/root.png'
+        server: 'assets/image/root.png',
+        general: 'assets/image/general.png'
     };
 
     let channel_list = [];
     let myClientId = 0;
     let viewer = document.getElementById('messages');
+    let currentChat = -1;
 
     // WebSocket
     const webSocket$ = webSocket('ws://' + window.location.hostname + ':8081');
@@ -50,7 +55,8 @@
                 // update images
                 document.getElementById("username").innerText = username;
                 document.getElementById("profile-img").src = avatars[avatar];
-                return {type: 'connect', avatar: avatar, sender: username};
+                document.getElementById("profile-img").className = myStatus;
+                return {type: 'connect', avatar: avatar, sender: username, status: myStatus};
             },
             () => ({type: 'disconnect', avatar: avatar, sender: username}),
             (_) => true
@@ -70,14 +76,16 @@
                     }
                     case 'ANNOUNCE': {
                         if (resp.message.userList) updateContacts(resp.message.userList);
-                        addMessage(resp.message, true);
+                        serverMessages['-1'].push(resp.message);
+                        updateMessage(-1);
                         scroll();
                         break;
                     }
                     case 'MSG': {
                         console.log('message received: ', resp.message);
-                        serverMessages.push(resp.message.content);
-                        addMessage(resp.message);
+                        let toMess = resp.to === 'all' ? -1 : resp.to === myClientId ? resp.message.from : resp.to;
+                        serverMessages[toMess].push(resp.message);
+                        updateMessage(toMess);
                         scroll();
                         break;
                     }
@@ -92,9 +100,9 @@
         .subscribe((event) => {
             event.preventDefault();
             if (event.type === 'keyup' && event.keyCode === 13) {
-                sendMessage(document.getElementById('message').value, username, false);
+                sendMessage(document.getElementById('message').value, username, false, currentChat >= 0 ? currentChat : undefined);
             } else if (event.type === 'click') {
-                sendMessage(document.getElementById('message').value, username, false);
+                sendMessage(document.getElementById('message').value, username, false, currentChat >= 0 ? currentChat : undefined);
             }
         });
 
@@ -128,24 +136,51 @@
         }
     }
 
-    function addMessage(message, isServer) {
+    function setMyStatus(status) {
+        sessionStorage.setItem('status', status);
+        const profile = document.getElementById('profile-img');
+        profile.className = status;
+        document.getElementById('profile-img').click();
+        webSocket$.next({type: 'status', sender: username, status: status});
+    }
+
+    function updateMessage(channel) {
         const messages = document.getElementById('messlist');
-        const li = document.createElement('li');
-        var text = document.createTextNode(message.content);
-        const p = document.createElement('p');
-        const image = document.createElement('img');
-        const idx = channel_list.findIndex(e => e.clientId === message.from);
-        if (message.from === myClientId) {
-            li.classList.add('sent');
-            image.src = avatars[avatar];
-        } else {
-            li.classList.add(isServer ? "server" : "replies");
-            image.src = isServer ? avatars.server : idx < 0 ? avatars.default : avatars[channel_list[idx].avatar];
+        updateContacts(channel_list);
+        if (channel === currentChat) {
+            messages.innerHTML = '';
+            serverMessages[channel].forEach(mess => {
+                const li = document.createElement('li');
+                var text = document.createTextNode(mess.content);
+                const p = document.createElement('p');
+                const image = document.createElement('img');
+                const idx = channel_list.findIndex(e => e.clientId === mess.from);
+                if (mess.from === myClientId) {
+                    li.classList.add('sent');
+                    image.src = avatars[avatar];
+                } else {
+                    li.classList.add(mess.from === 'SERVER' ? "server" : "replies");
+                    image.src = mess.from === 'SERVER' ? avatars.server : idx < 0 ? avatars.default : avatars[channel_list[idx].avatar];
+                }
+                p.appendChild(text);
+                li.appendChild(image, li.childNodes[0]);
+                li.appendChild(p, li.childNodes[0]);
+                messages.appendChild(li, messages.childNodes[0]);
+            });
         }
-        p.appendChild(text);
-        li.appendChild(image, li.childNodes[0]);
-        li.appendChild(p, li.childNodes[0]);
-        messages.appendChild(li, messages.childNodes[0]);
+    }
+
+    function switchChannel(chatId) {
+        const chatAvatar = document.getElementById('chat-avatar');
+        const chatName = document.getElementById('chat-name');
+        const idx = channel_list.findIndex(e => e.clientId === chatId);
+        if (idx >= 0) {
+            currentChat = chatId;
+            chatAvatar.src = avatars[channel_list[idx].avatar || 'default'];
+            chatName.innerText = channel_list[idx].username;
+            updateContacts(channel_list);
+            updateMessage(chatId);
+        }
     }
 
     function updateContacts(list) {
@@ -153,14 +188,16 @@
         const contacts = document.getElementById('contactlist');
         contacts.innerHTML = '';
         list.forEach(user => {
+            if (!serverMessages[user.clientId]) serverMessages[user.clientId] = [];
             if (user.clientId !== myClientId) {
-                contacts.innerHTML += `<li class="contact active">
+                const lastIdxMsg = serverMessages[user.clientId].length - 1;
+                contacts.innerHTML += `<li onclick="switchChannel(${user.clientId})" class="contact ${user.clientId === currentChat ? 'active' : ''}">
                     <div class="wrap">
-                        <span class="contact-status ${user.online ? 'online' : ''}"></span>
+                        <span class="contact-status ${user.status ? user.status : ''}"></span>
                         <img src="${avatars[user.avatar || 'default']}" alt=""/>
                         <div class="meta">
                             <p class="name">${user.username}</p>
-                            <p class="preview">I'm the master!</p>
+                            <p class="preview">${lastIdxMsg >= 0 ? serverMessages[user.clientId][lastIdxMsg].content : ''}</p>
                         </div>
                     </div>
                 </li>`;
@@ -197,5 +234,8 @@
     function easeInOutSin(t) {
         return (1 + Math.sin(Math.PI * t - Math.PI / 2)) / 2;
     }
+
+    window.setMyStatus = setMyStatus;
+    window.switchChannel = switchChannel;
 
 }());

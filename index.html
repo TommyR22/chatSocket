@@ -26,13 +26,13 @@
                 <i class="fa fa-chevron-down expand-button" id="options" aria-hidden="true"></i>
                 <div id="status-options">
                     <ul>
-                        <li id="status-online" class="active"><span class="status-circle"></span>
+                        <li id="status-online" onclick="setMyStatus('online')" class="active"><span class="status-circle"></span>
                             <p>Online</p></li>
-                        <li id="status-away"><span class="status-circle"></span>
+                        <li id="status-away" onclick="setMyStatus('away')"><span class="status-circle"></span>
                             <p>Away</p></li>
-                        <li id="status-busy"><span class="status-circle"></span>
+                        <li id="status-busy" onclick="setMyStatus('busy')"><span class="status-circle"></span>
                             <p>Busy</p></li>
-                        <li id="status-offline"><span class="status-circle"></span>
+                        <li id="status-offline" onclick="setMyStatus('offline')"><span class="status-circle"></span>
                             <p>Offline</p></li>
                     </ul>
                 </div>
@@ -94,8 +94,8 @@
     </div>
     <div class="content">
         <div class="contact-profile">
-            <img src="assets/image/general.png" alt=""/>
-            <p>#GENERAL</p>
+            <img id="chat-avatar" src="assets/image/general.png" alt=""/>
+            <p id="chat-name">#GENERAL</p>
             <div class="social-media">
                 <!--<i class="fa fa-facebook" aria-hidden="true"></i>-->
                 <!--<i class="fa fa-twitter" aria-hidden="true"></i>-->
