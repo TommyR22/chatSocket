@@ -4,8 +4,8 @@ const path = require('path');
 const WebSocketServer = require('ws').Server;
 const {Subscription} = require('rxjs');
 const cors = require('cors');
+const ip = require("ip");
 
-var ip = require("ip");
 console.log('Your IP address is: ');
 console.dir ( ip.address() );
 
