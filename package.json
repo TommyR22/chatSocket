@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "Simple chat implementation with WebSockets",
+  "description": "Simple chat implementation with Rx.JS WebSockets",
   "main": "server.js",
   "dependencies": {
     "rxjs": "^6.3.3"
@@ -15,7 +15,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node ./server.js"
   },
   "license": "ISC"
 }

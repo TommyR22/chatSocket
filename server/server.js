@@ -6,9 +6,6 @@ const {Subscription} = require('rxjs');
 const cors = require('cors');
 const ip = require("ip");
 
-console.log('Your IP address is: ');
-console.dir ( ip.address() );
-
 const app = express();
 const PORT = 8081;
 
@@ -16,6 +13,9 @@ const wss = new WebSocketServer({server});
 
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../')));
+
+console.log('Your IP address is: ');
+console.dir ( ip.address() );
 
 let clientList = [];
 let cid = 0;
