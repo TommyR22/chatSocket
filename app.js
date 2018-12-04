@@ -189,7 +189,7 @@
                 contacts.innerHTML += `<li onclick="switchChannel(${user.clientId})" class="contact ${user.clientId === currentChat ? 'active' : ''}">
                     <div class="wrap">
                         <span class="contact-status ${user.status ? user.status : ''}"></span>
-                        <img src="${avatars[user.avatar || 'default']}" alt=""/>
+                        <img src="${avatars[user.avatar] ? avatars[user.avatar] : avatars['default']}" alt=""/>
                         <div class="meta">
                             <p class="name">${user.username}</p>
                             <p class="preview">${lastIdxMsg >= 0 ? serverMessages[user.clientId][lastIdxMsg].content : ''}</p>
