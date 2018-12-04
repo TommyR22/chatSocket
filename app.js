@@ -171,7 +171,7 @@
         const idx = channel_list.findIndex(e => e.clientId === chatId);
         if (idx >= 0) {
             currentChat = chatId;
-            chatAvatar.src = avatars[channel_list[idx].avatar || 'default'];
+            chatAvatar.src = avatars[channel_list[idx].avatar] ? avatars[channel_list[idx].avatar] : avatars['default'];
             chatName.innerText = channel_list[idx].username;
             updateContacts(channel_list);
             updateMessage(chatId);
