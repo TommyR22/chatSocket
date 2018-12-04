@@ -3,18 +3,6 @@
     const {webSocket} = rxjs.webSocket;
     const {switchMap, retryWhen} = rxjs.operators;
 
-    let serverMessages = {
-        '-1': [] // broadcast channel
-    };
-
-    let message = {
-        type: 'message',
-        content: '',
-        sender: '',
-        receiver: '',
-        avatar: ''
-    };
-
     let username = localStorage.getItem('username');
     let avatar = localStorage.getItem('avatar') || 'default';
     let myStatus = sessionStorage.getItem('status') || 'online';
@@ -29,6 +17,9 @@
         general: 'assets/image/general.png'
     };
 
+    let serverMessages = {
+        '-1': [] // broadcast channel
+    };
     let channel_list = [];
     let myClientId = 0;
     let viewer = document.getElementById('messages');
@@ -125,7 +116,7 @@
 
     function sendMessage(content, sender, isBroadcast, receiver) {
         if (content && content.length > 0) {
-            message = {
+            const message = {
                 type: 'message',
                 content: {content: content},
                 from: myClientId,
@@ -144,6 +135,7 @@
         const profile = document.getElementById('profile-img');
         profile.className = status;
         document.getElementById('profile-img').click();
+        myStatus = status;
         webSocket$.next({type: 'status', sender: username, status: status});
     }
 
