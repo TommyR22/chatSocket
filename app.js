@@ -4,7 +4,7 @@
     const {switchMap, retryWhen} = rxjs.operators;
 
     let serverMessages = {
-        '-1': []
+        '-1': [] // broadcast channel
     };
 
     let message = {
@@ -46,8 +46,11 @@
                         localStorage.setItem('username', username);
                         avatar = prompt('Insert your favorite avatar from ["spiderman", "batman", "reply", "yoda"]:', 'spiderman');
                         if (avatar != null) {
+                            avatar = avatar.toLocaleLowerCase();
                             if (avatars[avatar] != null) {
                                 localStorage.setItem('avatar', avatar);
+                            } else {
+                                avatar = 'default';
                             }
                         }
                     }
