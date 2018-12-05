@@ -20,6 +20,9 @@
     let serverMessages = {
         '-1': [] // broadcast channel
     };
+    let lastIndexMsg = {
+      '-1': 0
+    };
     let channel_list = [];
     let myClientId = 0;
     let viewer = document.getElementById('messages');
@@ -170,6 +173,7 @@
         const chatName = document.getElementById('chat-name');
         const idx = channel_list.findIndex(e => e.clientId === chatId);
         if (idx >= 0) {
+            lastIndexMsg[chatId] = serverMessages[chatId].length;
             currentChat = chatId;
             chatAvatar.src = avatars[channel_list[idx].avatar] ? avatars[channel_list[idx].avatar] : avatars['default'];
             chatName.innerText = channel_list[idx].username;
@@ -183,11 +187,17 @@
         const contacts = document.getElementById('contactlist');
         contacts.innerHTML = '';
         list.forEach(user => {
-            if (!serverMessages[user.clientId]) serverMessages[user.clientId] = [];
+            if (!serverMessages[user.clientId]) {
+                serverMessages[user.clientId] = [];
+                lastIndexMsg[user.clientId] = 0;
+            }
             if (user.clientId !== myClientId) {
                 const lastIdxMsg = serverMessages[user.clientId].length - 1;
+                const unreadCount = lastIdxMsg + 1 - lastIndexMsg[user.clientId];
+                if(currentChat === user.clientId) lastIndexMsg[user.clientId] = lastIdxMsg + 1;
                 contacts.innerHTML += `<li onclick="switchChannel(${user.clientId})" class="contact ${user.clientId === currentChat ? 'active' : ''}">
                     <div class="wrap">
+                        ${currentChat !== user.clientId && unreadCount > 0 ? '<div class="badge">'  + unreadCount + '</div>' : ''}
                         <span class="contact-status ${user.status ? user.status : ''}"></span>
                         <img src="${avatars[user.avatar] ? avatars[user.avatar] : avatars['default']}" alt=""/>
                         <div class="meta">

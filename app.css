@@ -605,11 +605,7 @@ body {
   max-width: 205px;
   line-height: 130%;
 }
-@media screen and (min-width: 735px) {
-  #frame .content .messages ul li p {
-    max-width: 300px;
-  }
-}
+
 #frame .content .message-input {
   position: absolute;
   bottom: 0;
@@ -674,4 +670,31 @@ body {
 }
 #frame .content .message-input .wrap button:focus {
   outline: none;
+}
+@media screen and (min-width: 735px) {
+  #frame .content .messages ul li p {
+    max-width: 300px;
+  }
+  #frame #sidepanel #contacts ul li.contact {
+    min-height: 50px;
+  }
+  div.badge {
+    top: 5px;
+  }
+}
+
+@media screen and (max-width: 735px) {
+  div.badge {
+    bottom: -50px;
+  }
+}
+div.badge {
+  background-color: #435f7a;
+  border: 1px solid #878787;
+  box-shadow: 0 0 1px #333;
+  color: white;
+  padding: 3px 6px;
+  font-size: 12px;
+  position: absolute;
+  right: 2px;
 }
